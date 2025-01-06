@@ -41,8 +41,6 @@ import "core:fmt"
 import "core:math"
 import "core:slice"
 import "core:os"
-import "core:compress"
-import "vendor:directx/dxc"
 import "core:strings"
 
 Vec :: [ ]f64
@@ -188,7 +186,7 @@ trimmed_median :: proc ( vec          : Vec,
     sorted_data := slice.clone( vec )
     slice.sort( sorted_data )
 
-    trim_count := int( f64( n ) * trim_percent ) / 2
+    trim_count := int( math.floor( ( f64( n ) * trim_percent ) / 2.0 ) )
 
     if trim_count * 2 >= n {
         trimmed_median = 0
@@ -200,12 +198,12 @@ trimmed_median :: proc ( vec          : Vec,
     trimmed_data := sorted_data[ trim_count : n - trim_count ]
 
     new_n := len( trimmed_data )
-    mid   := new_n / 2
+    mid   := int( math.round_f64( f64( new_n ) / 2.0 ) )
 
     if new_n % 2 == 1 {
-        trimmed_median = sorted_data[ mid ]
+        trimmed_median = trimmed_data[ mid ]
     } else {
-        trimmed_median = ( sorted_data[ mid - 1 ] + sorted_data[ mid ] ) / 2
+        trimmed_median = ( trimmed_data[ mid - 1 ] + trimmed_data[ mid ] ) / 2.0
     }
 
     msg            = ""
@@ -325,18 +323,20 @@ percentile :: proc ( vec        : Vec,
         ok                  = false
         return value_at_percentile, msg, ok
     }
+
+    sorted_data := slice.clone( vec )
+    slice.sort( sorted_data )
+
     if percentile == 0 {
-        value_at_percentile = 0
+        value_at_percentile = sorted_data[ 0 ]
         msg                 = ""
         ok                  = true
         return value_at_percentile, msg, ok
     }
 
-    sorted_data := slice.clone( vec )
-    slice.sort( sorted_data )
 
     len_vec := len( sorted_data )
-    rank := ( percentile / 100 ) * ( f64( len_vec ) + 1 )
+    rank := ( percentile / 100 ) * ( f64( len_vec ) - 1 )
 
     if rank < 1 {
 
@@ -353,7 +353,8 @@ percentile :: proc ( vec        : Vec,
             return value_at_percentile, msg, ok
         } else {
 
-            lower_index := int( rank ) - 1
+            // lower_index := int( rank ) - 1
+            lower_index := int( rank )
             fractional  := rank - f64( int( rank ) )
             if fractional == 0 {
 
@@ -489,7 +490,7 @@ variance :: proc ( vec : Vec ) ->
     for elem in vec {
         square_diff_sum += ( elem - mean_val ) * ( elem - mean_val )
     }
-    variance_val = square_diff_sum / f64( len( vec ) )
+    variance_val = square_diff_sum / f64( len( vec ) - 1 )
 
     msg = ""
     ok  = true
